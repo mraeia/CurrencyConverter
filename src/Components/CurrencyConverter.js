@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import {APP_TITLE,LABEL_INPUT_1,LABEL_INPUT_2,CURRENCIES} from '../Consts';
 import CurrencyFromSelector from './CurrencySelector';
 import jsonPlaceholder from '../apis/jsonPlaceholder';
-import Modal from './Modal'
+import Modal from './Modal';
+import { connect } from 'react-redux';
 
 class CurrencyConverter extends Component{
 
@@ -10,59 +11,86 @@ class CurrencyConverter extends Component{
         super(props);
         
         this.state= {
-            fromCurrency: 'CAD',
-            toCurrency: 'USD',
-            fromValue: '0.00',
-            toValue: '0.00',
-            converstionRates: {},
+            fromValue: 0.00,
+            convertedValue: 0.00,
+            conversionRates: null,
+            conversionRate: 0,
             showModal: false
         }
     }
 
     onChange = (e) =>{
-        this.setState({ [e.target.name]: e.target.value });
-    }
-
-    componentDidUpdate(prevProps,prevState){
-        if (prevState.fromCurrency != this.state.fromCurrency){ 
-            // jsonPlaceholder.get(
-            //     `latest?access_key=${process.env.REACT_APP_API_KEY}&base=${this.state.fromCurrency}&symbols=${CURRENCIES.toString()}`
-            // ).then(rates => console.log(rates));
-        }
+        this.setState({ fromValue: Number(e.target.value) });      
     }
 
     componentDidMount(){
-        // jsonPlaceholder.get(
-        //     `latest?access_key=${process.env.REACT_APP_API_KEY}&symbols=${CURRENCIES.toString()}`
-        // ).then(rates => console.log(rates));
+        jsonPlaceholder.get(
+            `latest?access_key=${process.env.REACT_APP_API_KEY}&symbols=${CURRENCIES.toString()}`
+        ).then(res => {
+            if (res.data.success){
+                const conversionRates = res.data.rates;
+                const conversionRate = conversionRates[this.props.currencies.toCurrency] / conversionRates[this.props.currencies.fromCurrency];
+                this.setState({conversionRate,conversionRates});
+            }
+        }).catch(err =>{
+            console.log(err);
+            throw Error('Error fetching conversion rates ...');
+        });
+    }
+
+    componentDidUpdate(prevProps,prevState){
+        
+        if (this.state.conversionRates !== null && 
+            (prevState.conversionRate !== this.state.conversionRate 
+            || prevProps.currencies.fromCurrency !== this.props.currencies.fromCurrency 
+            || prevProps.currencies.toCurrency !== this.props.currencies.toCurrency)){
+            const conversionRate = this.state.conversionRates[this.props.currencies.toCurrency] / this.state.conversionRates[this.props.currencies.fromCurrency];
+            this.setState({conversionRate});
+            this.setState({convertedValue: (this.state.fromValue * this.state.conversionRate).toFixed(2)});
+        }
+
+        if (prevState.fromValue !== this.state.fromValue){
+            if (this.state.conversionRate !== 0 && this.state.fromValue !== ''){
+                this.setState({convertedValue: (this.state.fromValue * this.state.conversionRate).toFixed(2)});
+            }
+        }
     }
 
     getForm = () => {
-        return(
-            <form>
-                <div className="input">
-                    <label>
-                        {LABEL_INPUT_1}
-                        <div>
-                            <input onChange={this.onChange} type="number" name="fromValue" value={this.state.fromValue}/>
-                            <CurrencyFromSelector onChange={this.onChange} name="fromCurrency" value={this.props.fromCurrency} />
-                        </div>
-                    </label>
+        if (!this.state.conversionRates){
+            return(
+                <div>
+                    Loading...
                 </div>
-                <div className="input">
-                    <label>
-                        {LABEL_INPUT_2}
-                        <div>
-                            <input readOnly onChange={this.onChange} type="number" name="toValue" value={this.state.toValue}/>
-                            <CurrencyFromSelector onChange={this.onChange} name="toCurrency" value={this.props.fromCurrency} />
-                        </div>
-                    </label>
-                </div>
-            </form>
-        );
+            );
+        }
+        else{
+            return(
+                <form>
+                    <div className="input">
+                        <label>
+                            {LABEL_INPUT_1}
+                            <div>
+                                <input min="0" onChange={this.onChange} type="number" name="fromValue" value={this.state.fromValue}/>
+                                <CurrencyFromSelector name="fromCurrency" defaultValue="CAD" />
+                            </div>
+                        </label>
+                    </div>
+                    <div className="input">
+                        <label>
+                            {LABEL_INPUT_2}
+                            <div>
+                                <input min="0" readOnly type="number" name="convertedValue" value={this.state.convertedValue}/>
+                                <CurrencyFromSelector name="toCurrency" defaultValue="USD" />
+                            </div>
+                        </label>
+                    </div>
+                </form>
+            );
+        }
     }
 
-    showModal = () =>{
+    toggleModal = () =>{
         this.setState({showModal : !this.state.showModal})
     }
 
@@ -73,11 +101,15 @@ class CurrencyConverter extends Component{
             <div>
                 <h4 className='label'> {APP_TITLE} </h4>
                 {form}
-                <a onClick={this.showModal} href="#">Disclaimer</a>
-                {this.state.showModal? <Modal hideModal={this.showModal}/> : null}
+                <a onClick={this.toggleModal} href="#">Disclaimer</a>
+                {this.state.showModal? <Modal toggleModal={this.toggleModal}/> : null}
             </div>
         );
     }
 }
 
-export default CurrencyConverter;
+const mapStateToProps = state => {
+    return {  currencies : state.currencies };
+  };
+
+export default connect(mapStateToProps,null)(CurrencyConverter);
