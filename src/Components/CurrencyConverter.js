@@ -11,7 +11,7 @@ class CurrencyConverter extends Component{
         super(props);
         
         this.state= {
-            fromValue: 0.00,
+            inputValue: 0.00,
             convertedValue: 0.00,
             conversionRates: null,
             conversionRate: 0,
@@ -20,7 +20,7 @@ class CurrencyConverter extends Component{
     }
 
     onChange = (e) =>{
-        this.setState({ fromValue: Number(e.target.value) });      
+        this.setState({ inputValue: e.target.value });      
     }
 
     componentDidMount(){
@@ -39,19 +39,19 @@ class CurrencyConverter extends Component{
     }
 
     componentDidUpdate(prevProps,prevState){
-        
         if (this.state.conversionRates !== null && 
             (prevState.conversionRate !== this.state.conversionRate 
             || prevProps.currencies.fromCurrency !== this.props.currencies.fromCurrency 
-            || prevProps.currencies.toCurrency !== this.props.currencies.toCurrency)){
+            || prevProps.currencies.toCurrency !== this.props.currencies.toCurrency))
+        {
             const conversionRate = this.state.conversionRates[this.props.currencies.toCurrency] / this.state.conversionRates[this.props.currencies.fromCurrency];
             this.setState({conversionRate});
-            this.setState({convertedValue: (this.state.fromValue * this.state.conversionRate).toFixed(2)});
+            this.setState({convertedValue: (this.state.inputValue * this.state.conversionRate).toFixed(2)});
         }
 
-        if (prevState.fromValue !== this.state.fromValue){
-            if (this.state.conversionRate !== 0 && this.state.fromValue !== ''){
-                this.setState({convertedValue: (this.state.fromValue * this.state.conversionRate).toFixed(2)});
+        if (prevState.inputValue !== this.state.inputValue){
+            if (this.state.conversionRate !== 0 && this.state.inputValue !== ''){
+                this.setState({convertedValue: (this.state.inputValue * this.state.conversionRate).toFixed(2)});
             }
         }
     }
@@ -71,7 +71,7 @@ class CurrencyConverter extends Component{
                         <label>
                             {LABEL_INPUT_1}
                             <div>
-                                <input min="0" onChange={this.onChange} type="number" name="fromValue" value={this.state.fromValue}/>
+                                <input onChange={this.onChange} type="number" name="inputValue" value={this.state.inputValue}/>
                                 <CurrencyFromSelector name="fromCurrency" defaultValue="CAD" />
                             </div>
                         </label>
@@ -80,7 +80,7 @@ class CurrencyConverter extends Component{
                         <label>
                             {LABEL_INPUT_2}
                             <div>
-                                <input min="0" readOnly type="number" name="convertedValue" value={this.state.convertedValue}/>
+                                <input readOnly type="number" name="convertedValue" value={this.state.convertedValue}/>
                                 <CurrencyFromSelector name="toCurrency" defaultValue="USD" />
                             </div>
                         </label>
@@ -102,7 +102,7 @@ class CurrencyConverter extends Component{
                 <h4 className='label'> {APP_TITLE} </h4>
                 {form}
                 <a onClick={this.toggleModal} href="#">Disclaimer</a>
-                {this.state.showModal? <Modal toggleModal={this.toggleModal}/> : null}
+                {this.state.showModal? <Modal conversionRates={this.state.conversionRates} toggleModal={this.toggleModal}/> : null}
             </div>
         );
     }
