@@ -20,6 +20,9 @@ class CurrencyConverter extends Component{
     }
 
     onChange = (e) =>{
+        if (e.target.value === ''){
+            this.setState({ convertedValue: 0 })
+        }
         this.setState({ inputValue: e.target.value });      
     }
 
